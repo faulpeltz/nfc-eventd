@@ -289,12 +289,13 @@ typedef enum {
 } nfc_poll_mode;
 
 static nfc_target*
-ned_poll_for_tag(nfc_device* dev, nfc_target* tag)
+ned_poll_for_tag(nfc_device* dev, nfc_target* tag, bool* fatal)
 {
   uint8_t uiPollNr;
   const uint8_t uiPeriod = 2; /* 2 x 150 ms = 300 ms */
   const nfc_modulation nm[1] = { { .nmt = NMT_ISO14443A, .nbr = NBR_106 } };
 
+  *fatal = false;
   if( tag != NULL ) {
     /* We are looking for a previous tag */
     /* In this case, to prevent for intensive polling we add a sleeping time */
@@ -317,6 +318,11 @@ ned_poll_for_tag(nfc_device* dev, nfc_target* tag)
       return rv;
     }
   } else {
+    if (res == -1) {
+      ERR("Fatal poll error, device was disconnected");
+      *fatal = true;
+      return NULL;
+    }
     return NULL;
   }
 }
@@ -327,6 +333,7 @@ main ( int argc, char *argv[] ) {
     nfc_target* new_tag;
 
     int expire_count = 0;
+    bool fatal = false;
 
     INFO ("%s", PACKAGE_STRING);
 
@@ -384,7 +391,8 @@ main ( int argc, char *argv[] ) {
 
     do {
 detect:
-        new_tag = ned_poll_for_tag(device, old_tag);
+        new_tag = ned_poll_for_tag(device, old_tag, &fatal);
+	if (fatal) { break; }
 
         if ( old_tag == new_tag ) { /* state unchanged */
             /* on card not present, increase and check expire time */
