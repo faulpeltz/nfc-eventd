@@ -318,8 +318,8 @@ ned_poll_for_tag(nfc_device* dev, nfc_target* tag, bool* fatal)
       return rv;
     }
   } else {
-    if (res == -1) {
-      ERR("Fatal poll error, device was disconnected");
+    if (res == -1 || res == -3 || res == -4 || res == -5 || res == -80 || res == -20) {
+      ERR("Fatal poll error, device was disconnected: %d", res);
       *fatal = true;
       return NULL;
     }
